@@ -1,0 +1,305 @@
+// «Долг души» — первая playable-версия.
+// Слой: город (хаб) + бой в реальном времени с таймерными атаками.
+// Состояние хранится в localStorage (с try/catch) и, если доступно, в Telegram CloudStorage.
+
+(function () {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  const SAVE_KEY = "dolg-dushi-save-v1";
+  const MAX_LEVEL = 100;
+  const app = document.getElementById("app");
+
+  // ---------- Данные ----------
+  const FACTIONS = {
+    sword: { name: "Меч", hp: 30, dmg: 4, block: "Блок", ranks: ["Оруженосец", "Воин", "Рыцарь", "Паладин"] },
+    magic: { name: "Магия", hp: 20, dmg: 6, block: "Щит", ranks: ["Ученик", "Маг", "Магистр", "Архимаг"] },
+  };
+
+  const ZONE = { name: "Тёмный лес", minLevel: 1, maxLevel: 10 };
+
+  const MOBS = [
+    { name: "Крыса-переросток", hp: 20, dmg: 3, xp: 15, interval: [2.5, 4] },
+    { name: "Лесной волк", hp: 30, dmg: 5, xp: 25, interval: [2, 3.5] },
+    { name: "Гоблин-разбойник", hp: 40, dmg: 7, xp: 40, interval: [2, 3] },
+  ];
+
+  const BOSS = { name: "Гоблин-вожак", hp: 120, dmg: 12, xp: 150, interval: [2.5, 4.5], phaseAt: 0.5 };
+
+  // ---------- Состояние ----------
+  function newState() {
+    return { screen: "start", faction: null, level: 1, xp: 0, gold: 0, hp: 0, maxHp: 0, log: [] };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) return Object.assign(newState(), JSON.parse(raw));
+    } catch (e) { /* хранилище недоступно — играем без сохранения */ }
+    return newState();
+  }
+
+  function saveState() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
+  }
+
+  let S = loadState();
+  let fight = null;      // активный бой
+  let timers = [];       // таймеры текущего боя
+
+  // ---------- Вспомогательное ----------
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const xpNeed = (lvl) => lvl * 50;
+  const rankFor = (lvl) => {
+    const r = FACTIONS[S.faction].ranks;
+    const idx = Math.min(r.length - 1, Math.floor((lvl - 1) / 25));
+    return r[idx];
+  };
+  const playerDmg = () => FACTIONS[S.faction].dmg + S.level * 2;
+  const playerMaxHp = () => FACTIONS[S.faction].hp + S.level * 8;
+
+  function pushLog(text) {
+    S.log.unshift(text);
+    S.log = S.log.slice(0, 30);
+  }
+
+  function clearTimers() {
+    timers.forEach((t) => clearTimeout(t));
+    timers = [];
+  }
+
+  function later(ms, fn) {
+    const t = setTimeout(fn, ms);
+    timers.push(t);
+  }
+
+  // ---------- Экраны ----------
+  function render() {
+    if (S.screen === "start") return renderStart();
+    if (S.screen === "town") return renderTown();
+    if (S.screen === "fight") return renderFight();
+  }
+
+  function renderStart() {
+    app.innerHTML = `
+      <h1>Долг души</h1>
+      <div class="card">
+        <p>Ты попадаешь в фэнтези-мир. Тебя встречает белая богиня и говорит, что ты должен ей долг.</p>
+        <p class="muted">Выбери путь. Его можно сменить позже, несколько раз за игру.</p>
+      </div>
+      <div class="choice">
+        <button data-act="pick" data-faction="sword">Меч: много здоровья и блок</button>
+        <button data-act="pick" data-faction="magic">Магия: сильный урон, мало здоровья</button>
+      </div>`;
+  }
+
+  function renderTown() {
+    const need = xpNeed(S.level);
+    const xpPct = Math.min(100, Math.round((S.xp / need) * 100));
+    app.innerHTML = `
+      <h1>Город у ворот леса</h1>
+      <div class="card">
+        <h2>${FACTIONS[S.faction].name} · ${rankFor(S.level)}</h2>
+        <div class="stats">
+          <span>Уровень: <b>${S.level}</b> / ${MAX_LEVEL}</span>
+          <span>Урон: <b>${playerDmg()}</b></span>
+          <span>Здоровье: <b>${S.hp}</b> / ${playerMaxHp()}</span>
+          <span>Золото: <b>${S.gold}</b></span>
+        </div>
+        <div class="muted">Опыт до следующего уровня</div>
+        <div class="bar xp"><div style="width:${xpPct}%"></div></div>
+      </div>
+      <div class="card">
+        <h2>Зона: ${ZONE.name}</h2>
+        <p class="muted">Уровни ${ZONE.minLevel}–${ZONE.maxLevel}. Ниже своего уровня опыта почти нет.</p>
+        <button data-act="enter">В лес</button>
+        <button class="secondary" data-act="heal">Отдохнуть в таверне (восстановить здоровье)</button>
+      </div>
+      <div class="card">
+        <h2>Журнал</h2>
+        <div class="log">${S.log.length ? S.log.map(esc).join("<br>") : "Пока тихо."}</div>
+      </div>`;
+  }
+
+  function renderFight() {
+    const f = fight;
+    const bossCls = f.isBoss ? " enemy" : " enemy";
+    app.innerHTML = `
+      <h1>${f.isBoss ? "Босс: " : ""}${esc(f.mob.name)}</h1>
+      <div class="card">
+        <div class="muted">Враг</div>
+        <div class="bar enemy${f.isBoss && f.phase === 2 ? "" : ""}"><div style="width:${Math.max(0, (f.mob.hp / f.mob.maxHp) * 100)}%"></div></div>
+        <div class="muted">${Math.max(0, Math.round(f.mob.hp))} / ${f.mob.maxHp}${f.isBoss ? ` · фаза ${f.phase}` : ""}</div>
+      </div>
+      <div class="card">
+        <div class="muted">Ты</div>
+        <div class="bar"><div style="width:${Math.max(0, (S.hp / playerMaxHp()) * 100)}%"></div></div>
+        <div class="muted">${Math.max(0, S.hp)} / ${playerMaxHp()}</div>
+        <div class="warn" id="warn">${f.warn ? "!! " + esc(f.warn) : ""}</div>
+      </div>
+      <div class="card">
+        <div class="row">
+          <button data-act="attack" ${f.over ? "disabled" : ""}>Атака (${playerDmg()})</button>
+          <button data-act="block" ${f.over ? "disabled" : ""}>${FACTIONS[S.faction].block}</button>
+        </div>
+        <button class="secondary" data-act="flee" ${f.over ? "disabled" : ""}>Отступить</button>
+      </div>
+      <div class="card log">${f.log.map(esc).join("<br>")}</div>`;
+  }
+
+  // ---------- Бой ----------
+  function startFight(mob, isBoss) {
+    clearTimers();
+    fight = {
+      mob: { ...mob, maxHp: mob.hp },
+      isBoss,
+      phase: 1,
+      blocking: false,
+      over: false,
+      warn: "",
+      log: [`Ты встречаешь: ${mob.name}.`],
+    };
+    S.screen = "fight";
+    scheduleEnemyAttack();
+    render();
+    saveState();
+  }
+
+  // Удар врага: таймер на каждую атаку свой, у босса перед ударом предупреждение на 1,5 секунды.
+  function scheduleEnemyAttack() {
+    if (!fight || fight.over) return;
+    const [a, b] = fight.mob.interval;
+    const wait = rnd(a, b) * 1000;
+    later(wait, () => {
+      if (!fight || fight.over) return;
+      const telegraph = fight.isBoss || Math.random() < 0.4;
+      if (telegraph) {
+        fight.warn = "Удар!";
+        render();
+        later(1500, () => enemyStrike());
+      } else {
+        enemyStrike();
+      }
+    });
+  }
+
+  function enemyStrike() {
+    if (!fight || fight.over) return;
+    fight.warn = "";
+    let dmg = fight.mob.dmg;
+    if (fight.blocking) {
+      dmg = Math.ceil(dmg / 2);
+      fight.blocking = false;
+      fight.log.unshift(`Ты блокируешь удар: ${dmg} урона.`);
+    } else {
+      fight.log.unshift(`${fight.mob.name} бьёт: ${dmg} урона.`);
+    }
+    S.hp -= dmg;
+    if (S.hp <= 0) return defeat();
+    scheduleEnemyAttack();
+    render();
+  }
+
+  function playerAttack() {
+    if (!fight || fight.over) return;
+    const dmg = playerDmg();
+    fight.mob.hp -= dmg;
+    fight.log.unshift(`Ты бьёшь на ${dmg}.`);
+    if (fight.isBoss && !fight.phaseChanged && fight.mob.hp <= fight.mob.maxHp * BOSS.phaseAt) {
+      fight.phaseChanged = true;
+      fight.phase = 2;
+      fight.mob.dmg = Math.round(fight.mob.dmg * 1.4);
+      fight.log.unshift("Босс переходит во вторую фазу!");
+    }
+    if (fight.mob.hp <= 0) return victory();
+    render();
+  }
+
+  function playerBlock() {
+    if (!fight || fight.over) return;
+    fight.blocking = true;
+    fight.log.unshift(`${FACTIONS[S.faction].block} поднят: следующий удар слабее.`);
+    render();
+  }
+
+  function victory() {
+    fight.over = true;
+    clearTimers();
+    const gain = fight.mob.xp;
+    const gold = Math.round(rnd(3, 8) * (fight.isBoss ? 5 : 1));
+    S.xp += gain;
+    S.gold += gold;
+    fight.log.unshift(`Победа! +${gain} опыта, +${gold} золота.`);
+    while (S.xp >= xpNeed(S.level) && S.level < MAX_LEVEL) {
+      S.xp -= xpNeed(S.level);
+      S.level += 1;
+      const healed = playerMaxHp();
+      S.hp = healed;
+      pushLog(`Уровень ${S.level}! Урон ${playerDmg()}, здоровье ${healed}.`);
+    }
+    pushLog(`Победа над: ${fight.mob.name}.`);
+    S.screen = "town";
+    fight = null;
+    saveState();
+    setTimeout(render, 900);
+    render();
+  }
+
+  function defeat() {
+    fight.over = true;
+    clearTimers();
+    pushLog(`Ты пал в бою с: ${fight.mob.name}. Золото не потеряно.`);
+    S.hp = playerMaxHp();
+    S.screen = "town";
+    fight = null;
+    saveState();
+    render();
+  }
+
+  // ---------- Действия ----------
+  app.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    const act = btn.dataset.act;
+
+    if (act === "pick") {
+      S = newState();
+      S.faction = btn.dataset.faction;
+      S.hp = playerMaxHp();
+      S.screen = "town";
+      pushLog(`Ты выбрал путь: ${FACTIONS[S.faction].name}.`);
+      saveState();
+      return render();
+    }
+    if (act === "heal") {
+      S.hp = playerMaxHp();
+      pushLog("Таверна вернула здоровье.");
+      saveState();
+      return render();
+    }
+    if (act === "enter") {
+      const mobCount = Math.random() < 0.8 ? 0 : 1; // 80% обычный моб, 20% — босс зоны
+      const base = MOBS[Math.floor(Math.random() * MOBS.length)];
+      if (mobCount === 1) return startFight(BOSS, true);
+      return startFight({ ...base, hp: base.hp + S.level * 2, dmg: base.dmg + Math.floor(S.level / 3) }, false);
+    }
+    if (act === "attack") return playerAttack();
+    if (act === "block") return playerBlock();
+    if (act === "flee") {
+      if (fight) { fight.over = true; clearTimers(); }
+      pushLog("Ты отступил в город.");
+      fight = null;
+      S.screen = "town";
+      saveState();
+      return render();
+    }
+  });
+
+  // Если игрок закрыл приложение во время боя — при возврате он в городе.
+  if (S.screen === "fight") S.screen = "town";
+  if (S.screen === "town" && !S.faction) S.screen = "start";
+  if (S.hp <= 0 && S.faction) S.hp = playerMaxHp();
+
+  render();
+})();
