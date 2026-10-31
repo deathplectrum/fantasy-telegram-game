@@ -19,7 +19,7 @@
 
   // ---------- справочники ----------
   const CHAR = {
-    belaya: { name: 'Белая', color: 'linear-gradient(135deg,#e9f6ff,#9fd4ff)' },
+    belaya: { name: 'Юки', color: 'linear-gradient(135deg,#e9f6ff,#9fd4ff)' },
     iskra: { name: 'Искра', color: 'linear-gradient(135deg,#ffb36b,#ff6f61)' },
     kayra: { name: 'Кайра', color: 'linear-gradient(135deg,#a8f08a,#4fbf7a)' },
     lina: { name: 'Лина', color: 'linear-gradient(135deg,#ffd27a,#ff9a6b)' },

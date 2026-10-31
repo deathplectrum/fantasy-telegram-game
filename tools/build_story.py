@@ -14,14 +14,14 @@ SRC = sorted(f for f in glob.glob(os.path.join(ROOT, "story", "0*.md")) if not f
 OUT = os.path.join(ROOT, "js", "story-data.js")
 
 LETTERS = "АБВГ"
-AFF_NAMES = {"Белая": "belaya", "Искра": "iskra", "Кайра": "kayra", "Лина": "lina", "Эдрик": "edrik",
+AFF_NAMES = {"Юки": "belaya", "Искра": "iskra", "Кайра": "kayra", "Лина": "lina", "Эдрик": "edrik",
              "Марта": "marta", "Котелок": "kotelok", "Тисса": "tissa", "Ноэль": "noel",
              "напарница": "partner"}
 
 # Кто говорит → ключ спрайта
 SPEAKERS = [
     ("Святой Эдрик", "edrik"), ("Эдрик", "edrik"), ("Молодой Валериан", "valerian"), ("Валериан", "valerian"),
-    ("Ильвенн", "belaya"), ("Белая", "belaya"), ("Искра", "iskra"), ("Лиса", "fox"), ("Марта", "marta"),
+    ("Ильвенн", "belaya"), ("Юки", "belaya"), ("Искра", "iskra"), ("Лиса", "fox"), ("Марта", "marta"),
     ("Пип", "pip"), ("Кайра", "kayra"), ("Лина", "lina"), ("Котелок", "kotelok"), ("Гоблин-вожак", "kotelok"),
     ("Ганс", "gans"), ("Морвена", "morvena"), ("Считалка", "schitalka"), ("Бумажная девочка", "schitalka"),
     ("Тисса", "tissa"), ("Ноэль", "noel"), ("Торн", "torn"), ("Ясень", "yasen"), ("Мама", "mama"),
