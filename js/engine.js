@@ -45,6 +45,9 @@
     swamp: '#2a4a3a', turtle: '#3a5a4a', hut: '#4a3a2a', hospital: '#7a8a9a', kitchen: '#6a5a4a',
   };
 
+  // похожие локации, пока своей картинки нет
+  const BG_ALIAS = { swamp: 'forest', hut: 'room', kitchen: 'room', street: 'square', feast: 'tavern' };
+
   // эмоции по ремаркам в тексте
   const EMO_RULES = [
     ['angry', /(злит|рыч|шип|кричит|орёт|сердит|зло[ ,.)]|в ярост|сжимает кулак|скалит|бесит|рявка|хмур)/i],
@@ -211,6 +214,7 @@
     curBg = key; if (S) S.bg = key;
     const layers = document.querySelectorAll('#bg .bg-img');
     const next = layers[1 - bgFront];
+    if (!HAS_BG.has(key) && BG_ALIAS[key] && HAS_BG.has(BG_ALIAS[key])) key = BG_ALIAS[key];
     if (HAS_BG.has(key)) {
       next.className = 'bg-img';
       next.style.backgroundImage = 'url(art/bg/' + key + '.webp)';
@@ -246,6 +250,7 @@
   }
 
   function caption(text) {
+    document.querySelectorAll('.scene-cap').forEach((x) => x.remove());
     const c = document.createElement('div');
     c.className = 'scene-cap';
     c.textContent = text.replace(/^Сцена\s+[\d.]+\.\s*/, '');
@@ -292,7 +297,7 @@
       case 'scene':
         if (/Сцена\s+5\.5/.test(node.x) || S.ch > 5) S.iskraHuman = true;
         caption(node.x); return false;
-      case 'sub': caption(node.x); return false;
+      case 'sub': return false;
       case 'eff': applyEff(node.e); return false;
       case 'path': return false;
       case 'name': askName(); return true;
@@ -595,7 +600,8 @@
     clearTimeout(autoTimer);
     $('#btn-continue').hidden = !store.get('save_auto', null);
     $('#btn-chapters').hidden = store.get('unlocked', 0) < 1;
-    if (HAS_BG.has('title')) $('#title-screen .title-art').style.setProperty('--title-bg', 'url(art/bg/title.webp)');
+    const tb = ['title', 'meadow'].find((k) => HAS_BG.has(k));
+    if (tb) $('#title-screen .title-art').style.setProperty('--title-bg', 'url(art/bg/' + tb + '.webp)');
   }
   function hideTitle() { $('#title-screen').hidden = true; $('#topbar').hidden = false; }
 
