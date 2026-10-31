@@ -106,8 +106,8 @@
         <p>Выбери путь. Его можно сменить позже, несколько раз за игру.</p>
       </div>
       <div class="choice">
-        <button data-act="pick" data-faction="sword">Меч: много здоровья и блок</button>
-        <button data-act="pick" data-faction="magic">Магия: сильный урон, мало здоровья</button>
+        <button data-act="pick" data-faction="sword">⚔️ Меч: много здоровья и блок</button>
+        <button data-act="pick" data-faction="magic">🔮 Магия: сильный урон, мало здоровья</button>
       </div>`;
   }
 
@@ -144,33 +144,33 @@
       <div class="card">
         <h2>${FACTIONS[S.faction].name} · ${rankFor(S.level)}</h2>
         <div class="stats">
-          <span>Уровень: <b>${S.level}</b> / ${MAX_LEVEL}</span>
-          <span>Урон: <b>${playerDmg()}</b></span>
-          <span>Здоровье: <b>${S.hp}</b> / ${playerMaxHp()}</span>
-          <span>Золото: <b>${S.gold}</b></span>
+          <span>🏅 Уровень: <b>${S.level}</b> / ${MAX_LEVEL}</span>
+          <span>⚔️ Урон: <b>${playerDmg()}</b></span>
+          <span>❤️ Здоровье: <b>${S.hp}</b> / ${playerMaxHp()}</span>
+          <span>🪙 Золото: <b>${S.gold}</b></span>
         </div>
         <div class="muted">Опыт до следующего уровня</div>
         <div class="bar xp"><div style="width:${xpPct}%"></div></div>
         ${companion}
       </div>
       <div class="card">
-        <h2>Зелья перед боем</h2>
+        <h2>🧪 Зелья перед боем</h2>
         <p class="muted">Можно выпить до 2 зелий, по одному каждого вида. Во время боя пить нельзя.</p>
         ${drink || '<div class="muted">Запас пуст.</div>'}
         ${S.activePotions.length ? `<div class="muted">Выпито: ${S.activePotions.map((k) => POTIONS[k].name).join(", ")}</div>` : ""}
       </div>
       <div class="card">
-        <h2>Лавка</h2>
+        <h2>🛒 Лавка</h2>
         ${shop}
       </div>
       <div class="card">
-        <h2>Зона: ${ZONE.name}</h2>
+        <h2>🌲 Зона: ${ZONE.name}</h2>
         <p class="muted">Уровни ${ZONE.minLevel}–${ZONE.maxLevel}. Ниже своего уровня опыта почти нет.</p>
-        <button data-act="enter">В лес</button>
-        <button class="secondary" data-act="heal">Отдохнуть в таверне (восстановить здоровье)</button>
+        <button data-act="enter">🌲 Войти в лес</button>
+        <button class="secondary" data-act="heal">🍺 Отдохнуть в таверне (восстановить здоровье)</button>
       </div>
       <div class="card">
-        <h2>Журнал</h2>
+        <h2>📜 Журнал</h2>
         <div class="log">${S.log.length ? S.log.map(esc).join("<br>") : "Пока тихо."}</div>
       </div>`;
   }
@@ -182,12 +182,12 @@
     app.innerHTML = `
       <h1>${f.isBoss ? "Босс: " : ""}${esc(f.mob.name)}</h1>
       <div class="card">
-        <div class="muted">Враг</div>
+        <div class="muted">👹 Враг</div>
         <div class="bar enemy"><div style="width:${hpPct}%"></div></div>
         <div class="muted">${Math.max(0, Math.round(f.mob.hp))} / ${f.mob.maxHp}${f.isBoss ? ` · фаза ${f.phase}` : ""}</div>
       </div>
       <div class="card">
-        <div class="muted">Ты</div>
+        <div class="muted">🛡️ Ты</div>
         <div class="bar"><div style="width:${playerPct}%"></div></div>
         <div class="muted">${Math.max(0, S.hp)} / ${playerMaxHp()} · урон ${playerDmg()}</div>
         <div class="warn">${f.warn ? "!! " + esc(f.warn) : ""}</div>
