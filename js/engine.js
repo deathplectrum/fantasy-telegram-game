@@ -48,6 +48,10 @@
   // похожие локации, пока своей картинки нет
   const BG_ALIAS = { swamp: 'forest', hut: 'room', kitchen: 'room', street: 'square', feast: 'tavern' };
 
+  // эмоции, расставленные вручную (js/emotions.js), и запасные варианты
+  const EMOTIONS = window.EMOTIONS || {};
+  const EMO_FALLBACK = { blush: ['happy'], surprised: ['happy'] };
+
   // эмоции по ремаркам в тексте
   const EMO_RULES = [
     ['angry', /(злит|рыч|шип|кричит|орёт|сердит|зло[ ,.)]|в ярост|сжимает кулак|скалит|бесит|рявка|хмур)/i],
@@ -194,17 +198,26 @@
   function showSprite(key, emo) {
     const img = $('#sprite img');
     if (!key || !HAS_SPRITE.has(key)) { img.classList.remove('on', 'dim'); curSprite = null; return; }
-    const file = emo && HAS_SPRITE.has(key + '-' + emo) ? key + '-' + emo : key;
+    // если нужной эмоции нет, берём близкую
+    const chain = emo ? [emo].concat(EMO_FALLBACK[emo] || []) : [];
+    const found = chain.find((e) => HAS_SPRITE.has(key + '-' + e));
+    const file = found ? key + '-' + found : key;
     const src = 'art/sprites/' + file + '.webp';
     img.classList.remove('dim');
     if (curSprite !== file) {
       const changedChar = !curSprite || curSprite.split('-')[0] !== key;
       if (changedChar) img.classList.remove('on');
-      img.onload = () => { img.classList.add('on'); };
+      img.onload = () => { if (curSprite === file) img.classList.add('on'); };
       img.src = src;
       if (!changedChar) { img.classList.remove('bounce'); void img.offsetWidth; img.classList.add('bounce'); }
       curSprite = file;
     } else img.classList.add('on');
+  }
+  // герой: в прологе и арке 1 в мокрой куртке, дальше в одежде мага
+  function showHero(x) {
+    const key = S.ch <= 1 && HAS_SPRITE.has('hero-start') ? 'hero-start' : 'hero';
+    if (HAS_SPRITE.has(key)) showSprite(key, EMOTIONS['hero|' + x] || detectEmotion(x));
+    else hideSprite();
   }
   function dimSprite() { $('#sprite img').classList.add('dim'); }
   function hideSprite() { const img = $('#sprite img'); img.classList.remove('on', 'dim'); curSprite = null; }
@@ -313,15 +326,15 @@
       }
       case 'choice': showChoice(node, frame, idx); return true;
       case 'n':
-        setNameplate('', null); dimSprite();
+        setNameplate('', null); hideSprite();
         addLog('', node.x, 'n');
         say(fill(node.x), 'narr'); return true;
       case 'think':
-        setNameplate(S.name + ' · мысли', 'hero'); dimSprite();
+        setNameplate(S.name + ' · мысли', 'hero'); showHero(node.x);
         addLog(S.name + ' (про себя)', node.x, 't');
         say(fill(node.x), 'think'); return true;
       case 'sys':
-        setNameplate('Система', null); dimSprite();
+        setNameplate('Система', null); hideSprite();
         addLog('Система', node.x, 's');
         say('〔 ' + fill(node.x) + ' 〕', 'sys'); return true;
       case 'say': {
@@ -330,8 +343,8 @@
         let np = node.s === 'partner' ? (S.path === 'magic' ? 'lina' : 'kayra') : node.s;
         if (node.s === 'iskra' && !S.iskraHuman) np = 'iskra';
         setNameplate(fill(node.w), np);
-        if (node.s === 'hero') dimSprite();
-        else if (key) showSprite(key, detectEmotion(node.x));
+        if (node.s === 'hero') showHero(node.x);
+        else if (key) showSprite(key, EMOTIONS[node.s + '|' + node.x] || detectEmotion(node.x));
         else hideSprite();
         addLog(who, node.x, 'say');
         say(fill(node.x), ''); return true;
@@ -464,7 +477,7 @@
     openPanel('Конец', (body) => {
       const p = document.createElement('div');
       p.innerHTML = '<p style="margin:0 0 6px;line-height:1.5">Спасибо, что дочитал историю, ' + esc(S.name) + '.</p>' +
-        '<p style="margin:0;color:var(--ink-dim)">Концовка: <b style="color:var(--gold)">' + esc(S.ending || '—') + '</b>. Всего концовок четыре, попробуй другие.</p>';
+        '<p style="margin:0;color:var(--ink-dim)">Концовка: <b style="color:var(--gold)">' + esc(S.ending || '-') + '</b>. Всего концовок четыре, попробуй другие.</p>';
       body.appendChild(p);
       body.appendChild(btn('В главное меню', () => { closePanel(); showTitle(); }, true));
     }, true);
