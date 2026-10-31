@@ -1,0 +1,1 @@
+window.ART = { sprites: [], bg: [] };
