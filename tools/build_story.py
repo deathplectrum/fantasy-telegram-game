@@ -274,7 +274,8 @@ class Parser:
                 key = key[0]
             else:
                 key = re.sub(r"[^\wА-Яа-яЁё]", "", key) or key
-            label, _, tail = rest.partition(" — ")
+            m2 = re.search(r" - (?=\*[^*]*\*\s*$)", rest)
+            label, tail = (rest[:m2.start()], rest[m2.end():]) if m2 else (rest, "")
             label = label.strip()
             if is_final:
                 label = "«" + key + "». " + strip_italic(label)
