@@ -1,4 +1,4 @@
-// «Долг души» — первая рабочая версия.
+// «Легенды Средневековья» — первая рабочая версия.
 // Город (хаб), вступление с богиней, зелья перед боем (максимум 2: по одному каждого вида),
 // бой в реальном времени с таймерными атаками и ручным блоком, ручной спутник-зверь.
 // Прогресс хранится в localStorage (с try/catch) и не обязателен для игры.
@@ -7,7 +7,7 @@
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  const SAVE_KEY = "dolg-dushi-save-v2";
+  const SAVE_KEY = "legendy-sredneveka-save-v2";
   const MAX_LEVEL = 100;
   const app = document.getElementById("app");
 
@@ -100,7 +100,7 @@
 
   function renderStart() {
     app.innerHTML = `
-      <h1>Долг души</h1>
+      <h1>Легенды Средневековья</h1>
       <div class="card">
         <p class="muted">Ты попадаешь в фэнтези-мир. Тебя встречает белая богиня.</p>
         <p>Выбери путь. Его можно сменить позже, несколько раз за игру.</p>
