@@ -1,6 +1,6 @@
-// «Легенды Средневековья» — первая рабочая версия.
-// Город (хаб), вступление с богиней, зелья перед боем (максимум 2: по одному каждого вида),
-// бой в реальном времени с таймерными атаками и ручным блоком, ручной спутник-зверь.
+// «Легенды Средневековья» — рабочая версия.
+// Экран города: общая картинка, кнопки поверх, всплывающие панели (статистика, настройки, журнал).
+// Бой в реальном времени: таймерные атаки врага, предупреждение перед сильным ударом, блок, зелья до боя.
 // Прогресс хранится в localStorage (с try/catch) и не обязателен для игры.
 
 (function () {
@@ -10,6 +10,7 @@
   const SAVE_KEY = "legendy-sredneveka-save-v2";
   const MAX_LEVEL = 100;
   const app = document.getElementById("app");
+  const sheetEl = document.getElementById("sheet");
 
   // ---------- Данные ----------
   const FACTIONS = {
@@ -27,22 +28,23 @@
 
   const BOSS = { name: "Гоблин-вожак", hp: 120, dmg: 12, xp: 150, interval: [2.5, 4.5], phaseAt: 0.5 };
 
-  // Зелья: покупаются в городе, пьются только до боя. Максимум 2 — по одному каждого вида.
+  // Зелья: покупаются в лавке, пьются только до боя. Максимум 2 — по одному каждого вида.
   const POTIONS = {
     strength: { name: "Зелье силы", price: 15, desc: "+3 к урону в бою" },
     guard: { name: "Зелье защиты", price: 15, desc: "−2 к урону врага" },
   };
 
-  // Спутник-зверь. Найдётся в сюжете; даёт постоянный бонус.
-  const COMPANION = { name: "Лисица Тень-в-Листве", bonus: "guard", desc: "−1 к урону врага" };
+  // Спутник-зверь. Даётся за победу над вожаком; даёт постоянный бонус.
+  const COMPANION = { name: "Лисица Тень-в-Листве", desc: "−1 к урону врага" };
 
   // ---------- Состояние ----------
   function newState() {
     return {
-      screen: "start", faction: null, level: 1, xp: 0, gold: 0, hp: 0,
-      story: 0,            // 0 — вступление; 1 — богиня рассказала о долге; 2 — лиса найдена
-      potions: {},         // запас зелий { strength: 1, guard: 0 }
-      activePotions: [],   // выпитые перед боем (максимум 2, разные виды)
+      screen: "start", faction: null, name: "Герой", level: 1, xp: 0, gold: 0, hp: 0,
+      story: 0,            // 0 — старт; 1 — вступление; 2 — лиса найдена
+      theme: "auto",       // auto | light | dark
+      potions: {},
+      activePotions: [],
       companion: false,
       log: [],
     };
@@ -90,8 +92,124 @@
     timers.push(setTimeout(fn, ms));
   }
 
+  function applyTheme() {
+    const root = document.documentElement;
+    if (S.theme === "light" || S.theme === "dark") root.dataset.theme = S.theme;
+    else delete root.dataset.theme;
+  }
+
+  // ---------- Панели ----------
+  function openSheet(html) {
+    sheetEl.innerHTML = `<div class="sheet" role="dialog">${html}</div>`;
+    sheetEl.hidden = false;
+  }
+
+  function closeSheet() {
+    sheetEl.hidden = true;
+    sheetEl.innerHTML = "";
+  }
+
+  function statsHtml() {
+    const need = xpNeed(S.level);
+    const xpPct = Math.min(100, Math.round((S.xp / need) * 100));
+    const potions = Object.keys(POTIONS)
+      .filter((k) => S.potions[k] > 0)
+      .map((k) => `${POTIONS[k].name} × ${S.potions[k]}`)
+      .join(", ") || "нет";
+    return `
+      <div class="sheet-head">
+        <h2>${esc(S.name)}</h2>
+        <button class="sheet-close" data-act="close-sheet">Закрыть</button>
+      </div>
+      <div class="muted">${FACTIONS[S.faction].name} · ${rankFor(S.level)} · уровень ${S.level} из ${MAX_LEVEL}</div>
+      <div class="bar xp"><div style="width:${xpPct}%"></div></div>
+      <div class="muted">Опыт: ${S.xp} / ${need}</div>
+      <div class="stats" style="margin-top:12px">
+        <span>⚔️ Урон: <b>${playerDmg()}</b></span>
+        <span>❤️ Здоровье: <b>${S.hp}</b> / ${playerMaxHp()}</span>
+        <span>🪙 Золото: <b>${S.gold}</b></span>
+        <span>🐾 Спутник: <b>${S.companion ? esc(COMPANION.name) : "нет"}</b></span>
+      </div>
+      <div class="muted" style="margin-top:10px">🧪 Зелья в запасе: ${esc(potions)}</div>
+      ${S.companion ? `<div class="muted">Бонус спутника: ${COMPANION.desc}</div>` : ""}`;
+  }
+
+  function settingsHtml() {
+    const themeLabel = { auto: "Как в Telegram", light: "Светлая", dark: "Тёмная" }[S.theme];
+    return `
+      <div class="sheet-head">
+        <h2>⚙️ Настройки</h2>
+        <button class="sheet-close" data-act="close-sheet">Закрыть</button>
+      </div>
+      <div class="row-line"><span>Тема</span><button class="secondary" data-act="toggle-theme" style="margin:0;width:auto;padding:6px 12px">${themeLabel}</button></div>
+      <div class="row-line" style="display:block">
+        <span>Имя персонажа</span>
+        <input type="text" id="name-input" maxlength="20" value="${esc(S.name)}">
+        <button class="secondary" data-act="save-name" style="margin-top:8px">Сохранить имя</button>
+      </div>
+      <div class="row-line" style="display:block">
+        <span>Сброс прогресса</span>
+        <button class="secondary" data-act="reset" style="margin-top:8px;color:var(--danger);border-color:var(--danger)">Начать игру заново</button>
+      </div>`;
+  }
+
+  function logHtml() {
+    return `
+      <div class="sheet-head">
+        <h2>📜 Журнал</h2>
+        <button class="sheet-close" data-act="close-sheet">Закрыть</button>
+      </div>
+      <div class="log">${S.log.length ? S.log.map(esc).join("<br>") : "Пока тихо."}</div>`;
+  }
+
+  function shopHtml() {
+    const items = Object.entries(POTIONS).map(([k, p]) => `
+      <div class="row-line">
+        <span>${p.name} <span class="muted">(${p.desc})</span></span>
+        <button class="secondary" data-act="buy" data-potion="${k}" style="margin:0;width:auto;padding:6px 12px" ${S.gold < p.price ? "disabled" : ""}>${p.price} 🪙</button>
+      </div>`).join("");
+    return `
+      <div class="sheet-head">
+        <h2>🛒 Лавка</h2>
+        <button class="sheet-close" data-act="close-sheet">Закрыть</button>
+      </div>
+      <div class="muted" style="margin-bottom:6px">Золото: ${S.gold} 🪙</div>
+      ${items}`;
+  }
+
+  function potionsHtml() {
+    const owned = Object.keys(POTIONS).filter((k) => S.potions[k] > 0);
+    const rows = owned.map((k) => {
+      const active = S.activePotions.includes(k);
+      const full = S.activePotions.length >= 2;
+      const label = active ? "Выпито" : full ? "Лимит" : "Выпить";
+      return `
+        <div class="row-line">
+          <span>${POTIONS[k].name} × ${S.potions[k]}</span>
+          <button class="secondary" data-act="drink" data-potion="${k}" style="margin:0;width:auto;padding:6px 12px" ${active || full ? "disabled" : ""}>${label}</button>
+        </div>`;
+    }).join("");
+    return `
+      <div class="sheet-head">
+        <h2>🧪 Зелья перед боем</h2>
+        <button class="sheet-close" data-act="close-sheet">Закрыть</button>
+      </div>
+      <div class="muted" style="margin-bottom:6px">Можно выпить до 2 зелий, по одному каждого вида. Во время боя пить нельзя.</div>
+      ${rows || '<div class="muted">Запас пуст. Купи зелья в лавке.</div>'}`;
+  }
+
+  function soonHtml(title, text) {
+    return `
+      <div class="sheet-head">
+        <h2>${title}</h2>
+        <button class="sheet-close" data-act="close-sheet">Закрыть</button>
+      </div>
+      <div class="muted">${text}</div>`;
+  }
+
   // ---------- Экраны ----------
   function render() {
+    document.body.classList.toggle("scene", S.screen === "town");
     if (S.screen === "start") return renderStart();
     if (S.screen === "intro") return renderIntro();
     if (S.screen === "town") return renderTown();
@@ -112,66 +230,37 @@
   }
 
   function renderIntro() {
-    const lines = [
-      "Богиня смотрит на тебя без улыбки. «Ты должен мне долг. Я дала тебе жизнь в этом мире, и теперь пришло время платить».",
-      "Ты не помнишь, что брал в долг. Богиня лишь кивает на дорогу к городу: «Там разберёшься».",
-    ];
     app.innerHTML = `
       <h1>Вступление</h1>
-      <div class="card">${lines.map((l) => `<p>${esc(l)}</p>`).join("")}</div>
+      <div class="card">
+        <p>Богиня смотрит на тебя без улыбки. «Ты должен мне долг. Я дала тебе жизнь в этом мире, и теперь пришло время платить».</p>
+        <p class="muted">Как тебя зовут?</p>
+        <input type="text" id="name-input" maxlength="20" value="${esc(S.name)}">
+      </div>
       <button data-act="to-town">Идти в город</button>`;
   }
 
   function renderTown() {
-    const need = xpNeed(S.level);
-    const xpPct = Math.min(100, Math.round((S.xp / need) * 100));
     const potionCount = S.activePotions.length;
-    const potionsOwned = Object.entries(POTIONS).filter(([k]) => S.potions[k] > 0);
-    const shop = Object.entries(POTIONS)
-      .map(([k, p]) => `<button class="secondary" data-act="buy" data-potion="${k}" ${S.gold < p.price ? "disabled" : ""}>Купить: ${p.name} (${p.price} золота)</button>`)
-      .join("");
-    const drink = potionsOwned.map(([k]) => {
-      const active = S.activePotions.includes(k);
-      const disabled = active || potionCount >= 2;
-      return `<button class="secondary" data-act="drink" data-potion="${k}" ${disabled ? "disabled" : ""}>${active ? "Уже выпито: " : "Выпить: "}${POTIONS[k].name} (${S.potions[k]})</button>`;
-    }).join("");
-    const companion = S.companion
-      ? `<div class="muted">Спутник: ${esc(COMPANION.name)} (${COMPANION.desc})</div>`
-      : `<div class="muted">Спутника пока нет.</div>`;
-
     app.innerHTML = `
-      <h1>Город у ворот леса</h1>
-      <div class="card">
-        <h2>${FACTIONS[S.faction].name} · ${rankFor(S.level)}</h2>
-        <div class="stats">
-          <span>🏅 Уровень: <b>${S.level}</b> / ${MAX_LEVEL}</span>
-          <span>⚔️ Урон: <b>${playerDmg()}</b></span>
-          <span>❤️ Здоровье: <b>${S.hp}</b> / ${playerMaxHp()}</span>
-          <span>🪙 Золото: <b>${S.gold}</b></span>
+      <div class="scene-ui">
+        <div class="topbar">
+          <button class="icon-btn" data-act="open-settings" aria-label="Настройки">⚙️</button>
+          <button class="pill" data-act="open-stats">
+            <b>${esc(S.name)}</b>
+            <small>Уровень ${S.level} · ${FACTIONS[S.faction].name} · ${rankFor(S.level)}</small>
+          </button>
+          <button class="icon-btn" data-act="open-log" aria-label="Журнал">📜</button>
         </div>
-        <div class="muted">Опыт до следующего уровня</div>
-        <div class="bar xp"><div style="width:${xpPct}%"></div></div>
-        ${companion}
-      </div>
-      <div class="card">
-        <h2>🧪 Зелья перед боем</h2>
-        <p class="muted">Можно выпить до 2 зелий, по одному каждого вида. Во время боя пить нельзя.</p>
-        ${drink || '<div class="muted">Запас пуст.</div>'}
-        ${S.activePotions.length ? `<div class="muted">Выпито: ${S.activePotions.map((k) => POTIONS[k].name).join(", ")}</div>` : ""}
-      </div>
-      <div class="card">
-        <h2>🛒 Лавка</h2>
-        ${shop}
-      </div>
-      <div class="card">
-        <h2>🌲 Зона: ${ZONE.name}</h2>
-        <p class="muted">Уровни ${ZONE.minLevel}–${ZONE.maxLevel}. Ниже своего уровня опыта почти нет.</p>
-        <button data-act="enter">🌲 Войти в лес</button>
-        <button class="secondary" data-act="heal">🍺 Отдохнуть в таверне (восстановить здоровье)</button>
-      </div>
-      <div class="card">
-        <h2>📜 Журнал</h2>
-        <div class="log">${S.log.length ? S.log.map(esc).join("<br>") : "Пока тихо."}</div>
+        <div class="scene-spacer"></div>
+        <div class="actions">
+          <button class="action" data-act="open-guild"><span class="ico">🛡️</span>Гильдия</button>
+          <button class="action" data-act="open-tavern"><span class="ico">🍺</span>Таверна</button>
+          <button class="action" data-act="open-shop"><span class="ico">🛒</span>Лавка</button>
+          <button class="action" data-act="open-potions"><span class="ico">🧪</span>Зелья (${potionCount}/2)</button>
+          <button class="action" data-act="open-house"><span class="ico">🏠</span>Дом</button>
+          <button class="action" data-act="open-forest"><span class="ico">🌲</span>В лес</button>
+        </div>
       </div>`;
   }
 
@@ -187,7 +276,7 @@
         <div class="muted">${Math.max(0, Math.round(f.mob.hp))} / ${f.mob.maxHp}${f.isBoss ? ` · фаза ${f.phase}` : ""}</div>
       </div>
       <div class="card">
-        <div class="muted">🛡️ Ты</div>
+        <div class="muted">🛡️ ${esc(S.name)}</div>
         <div class="bar"><div style="width:${playerPct}%"></div></div>
         <div class="muted">${Math.max(0, S.hp)} / ${playerMaxHp()} · урон ${playerDmg()}</div>
         <div class="warn">${f.warn ? "!! " + esc(f.warn) : ""}</div>
@@ -309,36 +398,80 @@
   }
 
   function endFight(screen) {
-    // Зелья действуют только на один бой.
-    S.activePotions = [];
+    S.activePotions = []; // зелья действуют только на один бой
     S.screen = screen;
     fight = null;
     saveState();
     render();
   }
 
+  function resetGame() {
+    clearTimers();
+    fight = null;
+    S = newState();
+    S.screen = "start";
+    saveState();
+    closeSheet();
+    render();
+  }
+
   // ---------- Действия ----------
-  app.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-act]");
-    if (!btn || btn.disabled) return;
+  function readName() {
+    const input = document.getElementById("name-input");
+    const name = input ? input.value.trim() : "";
+    return name ? name.slice(0, 20) : S.name;
+  }
+
+  function handleAction(btn) {
     const act = btn.dataset.act;
 
+    // Панели
+    if (act === "close-sheet") return closeSheet();
+    if (act === "open-stats") return openSheet(statsHtml());
+    if (act === "open-settings") return openSheet(settingsHtml());
+    if (act === "open-log") return openSheet(logHtml());
+    if (act === "open-shop") return openSheet(shopHtml());
+    if (act === "open-potions") return openSheet(potionsHtml());
+    if (act === "open-guild") return openSheet(soonHtml("🛡️ Гильдия", "Ежедневные задания: две лёгкие и одна тяжёлая с большой наградой. Появятся в следующей версии."));
+    if (act === "open-house") return openSheet(soonHtml("🏠 Дом", "Сундук с золотом и улучшения дома. Появятся позже."));
+
+    if (act === "toggle-theme") {
+      S.theme = S.theme === "auto" ? "light" : S.theme === "light" ? "dark" : "auto";
+      applyTheme();
+      saveState();
+      return openSheet(settingsHtml());
+    }
+    if (act === "save-name") {
+      S.name = readName();
+      saveState();
+      return openSheet(settingsHtml());
+    }
+    if (act === "reset") {
+      if (window.confirm && window.confirm("Начать игру заново? Прогресс будет удалён.")) resetGame();
+      return;
+    }
+
+    // Старт и вступление
     if (act === "pick") {
+      const faction = btn.dataset.faction;
       S = newState();
-      S.faction = btn.dataset.faction;
+      S.faction = faction;
       S.hp = playerMaxHp();
-      S.story = 1;
       S.gold = 30; // стартовые деньги, чтобы купить первое зелье
+      S.story = 1;
       S.screen = "intro";
-      pushLog(`Ты выбрал путь: ${FACTIONS[S.faction].name}.`);
+      pushLog(`Ты выбрал путь: ${FACTIONS[faction].name}.`);
       saveState();
       return render();
     }
     if (act === "to-town") {
+      S.name = readName();
       S.screen = "town";
       saveState();
       return render();
     }
+
+    // Город
     if (act === "buy") {
       const k = btn.dataset.potion;
       const p = POTIONS[k];
@@ -347,7 +480,7 @@
       S.potions[k] = (S.potions[k] || 0) + 1;
       pushLog(`Куплено: ${p.name}.`);
       saveState();
-      return render();
+      return openSheet(shopHtml());
     }
     if (act === "drink") {
       const k = btn.dataset.potion;
@@ -356,33 +489,45 @@
       S.activePotions.push(k);
       pushLog(`Выпито перед боем: ${POTIONS[k].name} (${POTIONS[k].desc}).`);
       saveState();
+      closeSheet();
       return render();
     }
-    if (act === "heal") {
+    if (act === "open-tavern") {
       S.hp = playerMaxHp();
-      pushLog("Таверна вернула здоровье.");
+      pushLog("Таверна вернула здоровье. Отдых стоит ничего.");
       saveState();
-      return render();
+      return openSheet(soonHtml("🍺 Таверна", `Ты отдохнул, здоровье восстановлено: ${S.hp} / ${playerMaxHp()}. Наёмники и истории появятся позже.`));
     }
-    if (act === "enter") {
+    if (act === "open-forest") {
+      closeSheet();
       if (Math.random() < 0.2) return startFight(BOSS, true);
       const base = MOBS[Math.floor(Math.random() * MOBS.length)];
       return startFight({ ...base, hp: base.hp + S.level * 2, dmg: base.dmg + Math.floor(S.level / 3) }, false);
     }
+
+    // Бой
     if (act === "attack") return playerAttack();
     if (act === "block") return playerBlock();
     if (act === "flee") {
       pushLog("Ты отступил в город.");
-      endFight("town");
+      return endFight("town");
     }
+  }
+
+  document.addEventListener("click", (e) => {
+    // Клик по затемнению вне панели закрывает её.
+    if (e.target === sheetEl) return closeSheet();
+    const btn = e.target.closest("[data-act]");
+    if (!btn || btn.disabled) return;
+    handleAction(btn);
   });
 
-  // Закрыли приложение в бою — при возврате в городе, без зелий в запасе не теряем.
+  // Закрыли приложение в бою — при возврате в городе. Зелья не сохраняем между сессиями.
   if (S.screen === "fight") S.screen = "town";
   S.activePotions = [];
   if (!S.faction) S.screen = "start";
-  if (S.screen === "intro" && S.story >= 1 && !S.faction) S.screen = "start";
   if (S.faction && S.hp <= 0) S.hp = playerMaxHp();
 
+  applyTheme();
   render();
 })();

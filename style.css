@@ -227,3 +227,162 @@ button.secondary:active:not(:disabled) { transform: none; }
   body { padding: 20px; }
   h1 { font-size: 26px; }
 }
+
+/* ===== Экран города: общая картинка и кнопки поверх ===== */
+body.scene {
+  max-width: none;
+  padding: 0;
+  min-height: 100vh;
+  background: #8fb8d6 url("assets/town.svg") center bottom / cover no-repeat fixed;
+  position: relative;
+  overflow: hidden;
+}
+body.scene::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 14, 8, 0.35), rgba(20, 14, 8, 0) 40%, rgba(20, 14, 8, 0.25));
+  pointer-events: none;
+}
+.scene-ui {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 18px;
+}
+.topbar {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+}
+.icon-btn,
+.pill,
+.action {
+  font-family: var(--font-body);
+  color: #fffaf0;
+  background: rgba(40, 28, 16, 0.42);
+  border: 1px solid rgba(255, 236, 190, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+.pill {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 15px;
+  text-align: center;
+  width: 100%;
+}
+.pill b { display: block; font-family: var(--font-head); font-size: 16px; letter-spacing: 0.03em; }
+.pill small { opacity: 0.85; font-size: 12px; }
+
+.scene-spacer { flex: 1; }
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+}
+.action {
+  border-radius: 16px;
+  padding: 14px 10px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.action .ico { font-size: 24px; line-height: 1; }
+.action.wide { grid-column: 1 / -1; }
+.action:active:not(:disabled) { transform: scale(0.98); }
+.action:disabled { opacity: 0.45; }
+
+/* Всплывающие панели: статистика, настройки, журнал, разделы */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgba(10, 6, 2, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet-overlay[hidden] { display: none; }
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 78vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px 24px;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+  animation: rise 0.2s ease-out;
+}
+@keyframes rise {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sheet-head h2 { margin: 0; }
+.sheet-close {
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 14px;
+  box-shadow: none;
+}
+.sheet .stats { grid-template-columns: 1fr 1fr; }
+.sheet .stats span { font-size: 14px; }
+.sheet .row-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(201, 169, 106, 0.5);
+  font-size: 15px;
+}
+.sheet .row-line:last-child { border-bottom: none; }
+.sheet input[type="text"] {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+  margin-top: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sheet input[type="text"] { background: rgba(0, 0, 0, 0.25); }
+}
+
+/* Панели делаем почти непрозрачными, чтобы текст не читался поверх кнопок */
+.sheet { background: #fbf4e4; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sheet { background: #2a241e; }
+}
+:root[data-theme="dark"] .sheet { background: #2a241e; }

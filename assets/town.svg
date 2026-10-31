@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 800" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fb8d6"/>
+      <stop offset="0.55" stop-color="#f1d9a8"/>
+      <stop offset="1" stop-color="#e0b97a"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d8f4e"/>
+      <stop offset="1" stop-color="#4f5f32"/>
+    </linearGradient>
+  </defs>
+  <!-- Небо и солнце -->
+  <rect width="480" height="800" fill="url(#sky)"/>
+  <circle cx="380" cy="150" r="46" fill="#fff4d6" opacity="0.9"/>
+  <!-- Дальние горы -->
+  <path d="M0 430 L70 340 L130 400 L200 320 L280 410 L350 350 L420 400 L480 360 L480 520 L0 520 Z" fill="#a88aa0" opacity="0.7"/>
+  <!-- Стены и башни города -->
+  <rect x="40" y="380" width="400" height="120" fill="#b89776"/>
+  <g fill="#9c7b5f">
+    <rect x="30" y="360" width="36" height="150"/>
+    <rect x="414" y="360" width="36" height="150"/>
+    <rect x="220" y="330" width="40" height="170"/>
+  </g>
+  <g fill="#7a5b44">
+    <path d="M26 360 L48 330 L70 360 Z"/>
+    <path d="M410 360 L432 330 L454 360 Z"/>
+    <path d="M214 330 L240 296 L266 330 Z"/>
+  </g>
+  <!-- Ворота -->
+  <path d="M212 500 L212 440 Q240 410 268 440 L268 500 Z" fill="#4b3424"/>
+  <!-- Окна -->
+  <g fill="#ffd98a" opacity="0.85">
+    <rect x="60" y="410" width="12" height="18"/>
+    <rect x="120" y="410" width="12" height="18"/>
+    <rect x="340" y="410" width="12" height="18"/>
+    <rect x="400" y="410" width="12" height="18"/>
+    <rect x="226" y="360" width="10" height="16"/>
+    <rect x="244" y="360" width="10" height="16"/>
+  </g>
+  <!-- Таверна -->
+  <rect x="90" y="520" width="120" height="90" fill="#a2573a"/>
+  <path d="M84 520 L150 470 L216 520 Z" fill="#6e3a24"/>
+  <rect x="136" y="555" width="28" height="55" fill="#4b3424"/>
+  <rect x="104" y="538" width="20" height="18" fill="#ffd98a"/>
+  <rect x="180" y="538" width="20" height="18" fill="#ffd98a"/>
+  <!-- Гильдия -->
+  <rect x="270" y="510" width="130" height="100" fill="#8b6f52"/>
+  <path d="M264 510 L335 455 L406 510 Z" fill="#5a4330"/>
+  <rect x="318" y="550" width="34" height="60" fill="#3f2e21"/>
+  <!-- Земля -->
+  <rect y="600" width="480" height="200" fill="url(#ground)"/>
+  <path d="M190 800 L220 610 L260 610 L290 800 Z" fill="#c8b48a" opacity="0.8"/>
+  <!-- Деревья по краям -->
+  <g fill="#3e5b2e">
+    <circle cx="20" cy="590" r="38"/>
+    <circle cx="458" cy="585" r="42"/>
+    <circle cx="60" cy="640" r="30"/>
+    <circle cx="430" cy="650" r="34"/>
+  </g>
+  <g fill="#5b3d26">
+    <rect x="17" y="610" width="6" height="40"/>
+    <rect x="455" y="610" width="6" height="45"/>
+  </g>
+</svg>
