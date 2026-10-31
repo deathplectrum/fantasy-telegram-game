@@ -70,7 +70,7 @@
 
   function freshState(ch) {
     return {
-      name: 'Рен', path: null, romance: null, mem: 9, aff: {}, iskraHuman: false,
+      name: 'Рен', path: 'magic', romance: null, mem: 9, aff: {}, iskraHuman: false,
       stack: [{ p: [ch || 0], i: 0 }], ch: ch || 0, bg: null, log: [], ending: null,
     };
   }
@@ -395,20 +395,29 @@
   }
 
   // ---------- имя ----------
-  function askName() {
-    waiting = 'name';
-    $('#dialog').hidden = true;
+  // rename = true: смена имени из настроек, сюжет не двигается
+  function askName(rename) {
+    const prevWaiting = waiting;
+    if (!rename) { waiting = 'name'; $('#dialog').hidden = true; }
     const p = $('#name-input');
     p.hidden = false;
     const f = $('#name-field');
-    f.value = '';
+    f.value = rename ? S.name : '';
     setTimeout(() => f.focus(), 50);
     $('#name-ok').onclick = () => {
       let v = f.value.trim().replace(/[<>{}]/g, '').slice(0, 16);
-      if (!v) v = 'Рен';
+      if (!v) v = rename ? S.name : 'Рен';
       v = v.charAt(0).toUpperCase() + v.slice(1);
       S.name = v;
       p.hidden = true;
+      if (rename) {
+        waiting = prevWaiting;
+        const prof = store.get('profile', null);
+        if (prof) { prof.name = v; store.set('profile', prof); }
+        autosave();
+        toast('Теперь тебя зовут ' + v, 'gold');
+        return;
+      }
       waiting = null;
       step();
       autosave();
@@ -466,6 +475,7 @@
   function autosave() { if (S) store.set('save_auto', snapshot()); }
   function loadState(s) {
     S = s;
+    migrate(S);
     // повторить последнюю реплику: откатиться на один узел назад
     const top = S.stack[S.stack.length - 1];
     if (top && top.i > 0) top.i--;
@@ -475,6 +485,25 @@
     $('#chapter-name').textContent = D.chapters[S.ch].title;
     $('#choices').hidden = true;
     step();
+  }
+
+  // старые сохранения: путь меча убран, игра идёт только путём магии
+  function migrate(st) {
+    if (st.path !== 'magic') {
+      st.path = 'magic';
+      const k = st.stack.findIndex((f) => f.p.includes('sword'));
+      if (k >= 0) {
+        st.stack = st.stack.slice(0, k + 1);
+        st.stack[k] = { p: st.stack[k].p.map((x) => (x === 'sword' ? 'magic' : x)), i: 0 };
+        st.stack[k].i = 1; // откат в loadState вернёт на начало блока
+      }
+    }
+    // если структура главы изменилась и позиция не находится — начать главу заново
+    try {
+      st.stack.forEach((f) => { if (!Array.isArray(resolve(f.p))) throw new Error('bad'); if (f.i > resolve(f.p).length) throw new Error('bad'); });
+    } catch (e) {
+      st.stack = [{ p: [st.ch], i: 1 }];
+    }
   }
 
   // ---------- панели ----------
@@ -512,11 +541,7 @@
 
   function relations() {
     openPanel('Отношения', (body) => {
-      const names = AFF_SHOW.filter((k) => {
-        if (k === 'kayra' && S.path === 'magic' && !S.aff.kayra) return false;
-        if (k === 'lina' && S.path !== 'magic' && !S.aff.lina) return false;
-        return true;
-      });
+      const names = AFF_SHOW;
       names.forEach((k) => {
         const v = S.aff[k] || 0;
         const row = document.createElement('div');
@@ -570,6 +595,7 @@
 
   function settingsPanel() {
     openPanel('Настройки', (body) => {
+      body.appendChild(btn('Имя героя: ' + esc(S.name) + '<small>нажми, чтобы поменять</small>', () => { closePanel(); askName(true); }, false, 'chapter-btn'));
       const speeds = [[45, 'Медленно'], [28, 'Обычно'], [12, 'Быстро'], [0, 'Сразу']];
       const row = document.createElement('div'); row.className = 'log-line'; row.textContent = 'Скорость текста'; body.appendChild(row);
       speeds.forEach(([v, l]) => body.appendChild(btn((settings.speed === v ? '● ' : '○ ') + l, () => { settings.speed = v; store.set('settings', settings); settingsPanel(); })));
@@ -601,7 +627,7 @@
     $('#btn-continue').hidden = !store.get('save_auto', null);
     $('#btn-chapters').hidden = store.get('unlocked', 0) < 1;
     const tb = ['title', 'meadow'].find((k) => HAS_BG.has(k));
-    if (tb) $('#title-screen .title-art').style.setProperty('--title-bg', 'url(art/bg/' + tb + '.webp)');
+    if (tb) $('#title-screen .title-art').style.background = 'center / cover no-repeat url(art/bg/' + tb + '.webp)';
   }
   function hideTitle() { $('#title-screen').hidden = true; $('#topbar').hidden = false; }
 
@@ -625,7 +651,7 @@
           closePanel();
           S = freshState(i);
           Object.assign(S, prof, { stack: [{ p: [i], i: 0 }], ch: i, log: [], aff: Object.assign({}, prof.aff || {}) });
-          if (!S.path) S.path = 'sword';
+          S.path = 'magic';
           hideTitle(); curBg = null; startChapter(i);
         }, false, 'chapter-btn');
         if (i > un) b.classList.add('locked');
