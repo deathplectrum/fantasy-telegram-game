@@ -33,6 +33,8 @@
     dragon: { name: 'Дракон', color: 'linear-gradient(135deg,#ff9d8a,#c2413a)' },
     hero: { name: '', color: 'linear-gradient(135deg,#ff8fb8,#a078ff)' },
   };
+  // главы, где Кайра в доспехах: облава, Мгла, Солнечный Трон
+  const ARMOR_CHAPTERS = [5, 7, 9];
   const AFF_SHOW = ['belaya', 'iskra', 'kayra', 'lina', 'edrik', 'marta', 'kotelok', 'tissa', 'noel'];
   const BG_TINT = {
     black: '#000', void: '#0a0a14', sky: '#3a6fb0', spring: '#2f6b6b', well: '#2a3a4a', temple: '#3a3460', pass: '#5b6b80',
@@ -181,8 +183,9 @@
 
   function spriteKey(s) {
     if (!s || s === 'hero') return null;
-    if (s === 'partner') return S.path === 'magic' ? 'lina' : 'kayra';
+    if (s === 'partner') s = S.path === 'magic' ? 'lina' : 'kayra';
     if (s === 'iskra' && !S.iskraHuman) return 'fox';
+    if (s === 'kayra' && ARMOR_CHAPTERS.includes(S.ch)) return 'kayra-armor';
     return s;
   }
   function showSprite(key, emo) {

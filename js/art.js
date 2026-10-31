@@ -1,1 +1,2 @@
-window.ART = { sprites: [], bg: [] };
+// Список готовых картинок (обновляется вместе с art/).
+window.ART = {"sprites": ["belaya", "belaya-angry", "belaya-blush", "belaya-happy", "belaya-sad", "dragon", "edrik", "edrik-angry", "edrik-happy", "edrik-sad", "edrik-surprised", "fox", "gans", "iskra", "iskra-angry", "iskra-happy", "iskra-sad", "iskra-surprised", "kayra", "kayra-armor", "kayra-armor-angry", "kayra-armor-blush", "kayra-armor-happy", "kayra-armor-sad", "kotelok", "lina", "lina-angry", "lina-blush", "lina-happy", "lina-sad", "marta", "marta-angry", "marta-happy", "marta-sad", "morvena", "noel", "pip", "schitalka", "tissa", "torn", "valerian", "valerian-angry", "valerian-happy", "yasen"], "bg": []};
