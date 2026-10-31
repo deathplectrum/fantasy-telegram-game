@@ -3,15 +3,70 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <title>Легенды Средневековья</title>
+  <title>Легенды Средневековья: Долг души</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Nunito:ital,wght@0,400;0,600;0,800;1,400;1,600&display=swap">
+  <link rel="stylesheet" href="css/vn.css">
 </head>
 <body>
-  <main id="app"></main>
-  <div id="sheet" class="sheet-overlay" hidden></div>
-  <div id="toast" class="toast" hidden></div>
-  <script src="story.js"></script>
-  <script src="game.js"></script>
+  <div id="game">
+    <div id="bg" class="layer"><div class="bg-img"></div><div class="bg-img"></div></div>
+    <div id="sprite" class="layer"><img alt=""></div>
+    <div id="fx" class="layer"></div>
+
+    <header id="topbar" hidden>
+      <button id="btn-menu" class="glass-btn" aria-label="Меню">☰</button>
+      <div id="chapter-name"></div>
+      <button id="btn-log" class="glass-btn" aria-label="Журнал">☷</button>
+    </header>
+
+    <section id="dialog" hidden>
+      <div id="nameplate"></div>
+      <div id="text"></div>
+      <div id="next-ind">▼</div>
+    </section>
+
+    <section id="choices" hidden></section>
+    <div id="toasts"></div>
+
+    <section id="title-screen" class="screen">
+      <div class="title-art"></div>
+      <div class="title-box">
+        <div class="logo-small">Легенды Средневековья</div>
+        <h1 class="logo">Долг души</h1>
+        <div class="title-buttons">
+          <button id="btn-continue" class="glass-btn big" hidden>Продолжить</button>
+          <button id="btn-new" class="glass-btn big primary">Новая история</button>
+          <button id="btn-chapters" class="glass-btn big">Главы</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="chapter-card" class="screen" hidden>
+      <div class="cc-arc"></div>
+      <div class="cc-title"></div>
+    </section>
+
+    <section id="panel" class="screen panel" hidden>
+      <div class="panel-box">
+        <div class="panel-head"><span class="panel-title"></span><button class="glass-btn panel-close">✕</button></div>
+        <div class="panel-body"></div>
+      </div>
+    </section>
+
+    <section id="name-input" class="screen panel" hidden>
+      <div class="panel-box">
+        <div class="panel-head"><span class="panel-title">Как тебя зовут?</span></div>
+        <div class="panel-body">
+          <input id="name-field" maxlength="16" autocomplete="off" placeholder="Имя героя">
+          <button id="name-ok" class="glass-btn big primary">Готово</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="js/art.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/engine.js"></script>
 </body>
 </html>
